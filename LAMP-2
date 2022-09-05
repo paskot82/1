@@ -1,0 +1,133 @@
+#!/bin/bash
+
+
+
+
+if [ $1 = "y" ];then
+chown -R www-data:www-data /var/www/html
+fi
+
+
+
+host_list="2.kaka.pp.ua"
+
+
+
+
+
+
+# установка LAMP
+
+apt-get update -y
+
+apt-get install apache2 -y
+
+systemctl start apache2
+systemctl enable apache2
+
+apt-get install mariadb-server mariadb-client -y
+
+systemctl start mariadb
+systemctl enable mariadb
+
+mysql_secure_installation
+
+#Enter current password for root (enter for none): Press the Enter key
+#Set root password? [Y/n]: Y
+#New password: Enter password
+#Re-enter new password: Repeat password
+#Remove anonymous users? [Y/n]: Y
+#Disallow root login remotely? [Y/n]: Y
+#Remove test database and access to it? [Y/n]:  Y
+#Reload privilege tables now? [Y/n]:  Y
+
+apt-get install php php-cli php-mysql php-curl php-zip libapache2-mod-php -y
+
+#nano /etc/php/7.0/apache2/php.ini
+
+#поменять значения в файле на эти:
+mem="memory_limit ="
+upl="upload_max_filesize ="
+max_exe="max_execution_time ="
+timezone="date.timezone ="
+
+cat /etc/php/7.0/apache2/php.ini |
+# sed -e "s/.*$mem.*/memory_limit = 256M/g" |
+ sed -e "s/.*$mem.*/memory_limit = 256M/g" |
+ sed -e "s/.*$upl.*/upload_max_filesize = 100M/g" |
+ sed -e "s/.*$max_exe.*/max_execution_time = 360/g" |
+ sed -e "s/.*$timezone.*/date.timezone = America\/Chicago/g" > /etc/php/7.0/apache2/php.ini
+
+#
+
+systemctl restart apache2
+
+chown -R www-data:www-data /var/www/html/
+chmod -R 755 /var/www/html/
+
+# команда добавления виртуального хоста (exmaple.com заменить на домен из списка); 
+
+#nano /etc/apache2/sites-available/example.com.conf
+
+# и добавить запись в файле:
+
+echo
+echo
+echo
+echo " Добавлениe виртуальных хостов:"
+echo
+echo -e "\t""Админ             Xост"
+echo "__________________________"
+for ServerName in $host_list
+ do
+
+ServerAdmin="admin"
+#ServerAdmin=`echo $line | awk '{print $1}'`
+#ServerName=`echo $line | awk '{print $2}'`
+
+echo -e "\t"${ServerAdmin}"   \t"${ServerName}
+
+
+config_addrec="/etc/apache2/sites-available/$ServerName.conf"
+echo "<VirtualHost *:80>" >> $config_addrec
+echo "    ServerAdmin ${ServerAdmin}@${ServerName}" >> $config_addrec
+echo "    ServerName ${ServerName}" >> $config_addrec
+echo "    DocumentRoot /var/www/html" >> $config_addrec
+echo "    DirectoryIndex index.php" >> $config_addrec
+echo "    ErrorLog \${APACHE_LOG_DIR}/${ServerName}_error.log" >> $config_addrec
+echo "    CustomLog \${APACHE_LOG_DIR}/${ServerName}_access.log combined" >> $config_addrec
+echo "</VirtualHost>" >> $config_addrec
+
+# активируем вирт.хост
+a2ensite $ServerName
+done
+
+systemctl restart apache2
+
+# затем устанавливаем snap и cerbot
+
+sudo apt update
+sudo apt install snapd
+
+sudo snap install core
+
+# cerbot
+
+sudo snap install --classic certbot
+
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+
+# и после установки вышеперечисленного финальный акт - установка ssl на все добавленные домены через cerbot (example.com меняется на домены из списка, поочередно. либо через ";")
+
+for ServerName in $host_list
+ do
+ echo "Установка ssl на:  $ServerName"
+certbot --apache -d $ServerName
+sleep 1
+done
+
+
+sed -i 's/short_open_tag = Off/short_open_tag = On/g' /etc/php/*/apache2/php.ini 
+
+
+
