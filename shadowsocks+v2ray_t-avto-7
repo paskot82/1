@@ -1,0 +1,155 @@
+#!/bin/bash
+
+
+
+username="root"
+host="kaka.pp.ua"
+mail="root@mail.ru"
+password="aRtem2007a"
+local_port="443"
+ssh_key_name="key_zanovo"
+
+
+
+
+clear
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+FIOLET=$(tput setaf 4)
+NC=$(tput sgr0) #  Stop color
+
+
+
+
+
+
+
+apt update -y
+apt upgrade -y
+
+git clone https://github.com/USATUKirill96/shadowsocks-vray-playbooks.git
+cd ./shadowsocks-vray-playbooks
+
+# установка зависимостей
+echo "установка зависимостей"
+apt install -y pip ansible
+python3 -m pip install virtualenv
+python3 -m virtualenv venv
+source venv/bin/activate
+pip install -r requirements.txt
+echo "======================="
+
+cp -a ./variables.example.yml ./variables.yml
+cp -a ./inventories/hosts.example.ini ./inventories/hosts.ini
+
+
+show_file (){
+cd ./shadowsocks-vray-playbooks
+	echo
+	clear
+	cat ./variables.yml
+	echo
+}
+
+
+
+
+
+
+
+
+
+
+echo
+echo "$GREEN Меняем инфу в файлы:$NC"
+echo " "			
+echo "-------------------------"
+echo "./variables.yml"
+echo "-------------------------"		
+show_file
+echo "-------------------------"
+echo "./inventories/hosts.ini"
+echo "-------------------------"
+cat ./inventories/hosts.ini
+echo "-------------------------"
+sleep 2
+echo; echo; echo 
+
+
+sed -i -e "s/.*user:.*/user: $username/g" ./variables.yml
+sed -i -e "s/.*host:.*/host: $host/g" ./variables.yml
+sed -i -e "s/.*server ansible_host=.*/server ansible_host=$host/g" ./inventories/hosts.ini
+sed -i -e "s/.*email:.*/email: $mail/g" ./variables.yml
+sed -i -e "s/.*proxy_password:.*/proxy_password: $password/g" ./variables.yml
+sed -i -e "s/.*local_port:.*/local_port: $local_port/g" ./variables.yml
+
+	echo
+	echo "Cкопируйте оба ключ-файлы (из .ssh) в текущую папку:"
+	echo "                                       (./shadowsocks-vray-playbooks)"
+	echo
+	echo "   (пример:  scp ~/.ssh/digi_ocean3/key_zan* dg3:./shadowsocks-vray-playbooks/"
+	echo
+	echo "как скоприруешь, жми <ENTER> для продолжения"
+	echo 
+	read xxxx
+	echo 
+
+echo -e "\nansible_ssh_private_key_file: $ssh_key_name" >> ./variables.yml
+
+echo
+echo "     изменено:"			
+echo "-------------------------"
+echo "./variables.yml"
+echo "-------------------------"		
+show_file
+echo "-------------------------"
+echo "./inventories/hosts.ini"
+echo "-------------------------"
+cat ./inventories/hosts.ini
+echo "-------------------------"
+echo
+sleep 3
+
+echo
+echo "$GREEN Регестрируем ключи ssh $NC"
+echo
+ansible-playbook -i inventories/hosts.ini --extra-vars "@variables.yml"  deploy/client.yml --tags prepare_ssh
+
+echo
+echo "$GREEN Настройка окружения виртуальной машины $NC"
+echo
+ansible-playbook -i inventories/hosts.ini --extra-vars "@variables.yml"  deploy/setup.yml
+
+echo
+echo "$GREEN очистить iptables $NC"
+echo
+ansible-playbook -i inventories/hosts.ini --extra-vars "@variables.yml"  deploy/setup.yml --tags disable-iptables
+
+
+echo
+echo "$GREEN Запуск сервера $NC"
+echo
+ansible-playbook -i inventories/hosts.ini --extra-vars "@variables.yml"  deploy/server.yml
+
+
+echo
+echo "$GREEN Генерация конфигов для клиента $NC"
+echo
+ansible-playbook -i inventories/hosts.ini --extra-vars "@variables.yml"  deploy/client.yml
+
+
+if [ -f ./client-config/qrcode.png ];then
+echo; echo; echo
+echo "конфиго для клиента готов"
+echo
+echo "scp dg3:/root/shadowsocks-vray-playbooks/client-config/qrcode.png ~/Desktop/gifff/bash/1_Prikladnie/DiGiocean"
+echo
+fi
+
+
+
+
+
+exit 0
+
