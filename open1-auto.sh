@@ -1168,12 +1168,12 @@ function newClient() {
 		esac
 	} >>"$homeDir/$CLIENT.ovpn"
 # test
-linktofile="$(curl -F "file=@/root/$CLIENT.ovpn" "https://file.io" | jq ".link")"
+linktofile="$(curl -F "file=@$homeDir/$CLIENT.ovpn" "https://file.io" | jq ".link")"
 
 	clear
 	echo	
 echo -e "$linktofile - ссылка  на конфигурационный файл клиента $CLIENT"
-echo "$CLIENT	:	$linktofile" >> /home/users_upload_links.txt
+echo "$CLIENT	:	$linktofile" >> $homeDir/users_upload_links.txt
 echo "$CLIENT	:	$linktofile" >> /tmp/users_upload_links.txt
 chmod 666 /home/users_upload_links.txt
 chmod 666 /tmp/users_upload_links.txt
@@ -1433,9 +1433,29 @@ showlink(){
 			echo "$client_number: ввод неверен."
 			read -p "Клиент: " client_number
 		done
+		
+		
+					# Домашний каталог пользователя, в который будет записана конфигурация клиента
+	if [ -e "/home/${client}" ]; then
+		# if $1 is a user name
+		homeDir="/home/${client}"
+	elif [ "${SUDO_USER}" ]; then
+		# if not, use SUDO_USER
+		if [ "${SUDO_USER}" == "root" ]; then
+			# При запуске sudo от имени root
+			homeDir="/root"
+		else
+			homeDir="/home/${SUDO_USER}"
+		fi
+	else
+		# if not SUDO_USER, use /root
+		homeDir="/root"
+	fi
+		
+		
 		client=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | sed -n "$client_number"p)
 		echo
-		linktofile="$(curl -F "file=@/root/$client.ovpn" "https://file.io" | jq ".link")"
+		linktofile="$(curl -F "file=@$homeDir/$client.ovpn" "https://file.io" | jq ".link")"
 		clear
 		echo
 		echo -e "$linktofile - ссылка  на конфигурационный файл клиента $client" && echo
