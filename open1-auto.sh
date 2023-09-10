@@ -9,7 +9,7 @@
 if [ $# -ne 0 ]; then 
 AUTO_INSTALL="y"
 AUTO_EXIT="y"
-clientA=$1
+#clientA=$1
 fi
 
 
@@ -639,7 +639,7 @@ function installOpenVPN() {
 		COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-n}
 		CUSTOMIZE_ENC=${CUSTOMIZE_ENC:-n}
 #		CLIENT=${CLIENT:-client}
-		CLIENT=$clientA
+#		CLIENT=$clientA
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
 
@@ -1071,11 +1071,11 @@ verb 3" >>/etc/openvpn/client-template.txt
 	fi
 
 	# Создайте пользовательский клиент.ovpn
-	newClient
-	echo; echo; echo; echo;
-	echo "Пользователь создан!"
-	sleep 3
-	manageMenu
+#	newClient
+#	echo; echo; echo; echo;
+#	echo "Пользователь создан!"
+#	sleep 3
+#	manageMenu
 }
 
 function newClient() {
@@ -1187,7 +1187,7 @@ chmod 666 /tmp/users_upload_links.txt
 	echo "Загрузите файл $CLIENT.ovpn и импортируйте его в свой клиент OpenVPN."
 	echo; echo; echo; echo;
 	echo "Пользователь создан!"
-	if [[ $AUTO_EXIT != "y" ]];then
+	if [[ "$AUTO_EXIT" != "y" ]];then
 	read -n1 -r -p "Нажмите Enter для возврата в меню..."
 	
 		echo; echo; echo;
@@ -1644,14 +1644,23 @@ initialCheck
 # Проверьте, установлен ли OpenVPN уже
 if [[ -e /etc/openvpn/server.conf ]]; then
 	if [[ $AUTO_INSTALL = "y" ]];then
-	
-	for new_arg in $@
-	do
-		CLIENT=$new_arg
-		PASS=${PASS:-1}
-		newClient
-	done
+		for new_arg in $@
+		do
+			CLIENT=$new_arg
+			PASS=${PASS:-1}
+			newClient
+		done
+	fi
+	manageMenu
+else
+	installOpenVPN
 		if [ "$1" ];then
+			for new_arg in $@
+			do
+				CLIENT=$new_arg
+				PASS=${PASS:-1}
+				newClient
+			done
 			echo "__________________"
 			echo "Auto EXIT in 5 sec"
 			echo "   or press"
@@ -1662,10 +1671,10 @@ if [[ -e /etc/openvpn/server.conf ]]; then
 				manageMenu
 			fi
 			exit 0
-		fi
-	fi
+		else
+			newClient
+		fi	
+
 	manageMenu
-else
-	installOpenVPN
 	#AUTO_INSTALL
 fi
