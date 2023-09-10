@@ -8,6 +8,7 @@
 
 if [ $# -ne 0 ]; then 
 AUTO_INSTALL="y"
+AUTO_EXIT="y"
 clientA=$1
 fi
 
@@ -15,9 +16,9 @@ fi
 
 
 
-if [ "$2" ];then
-AUTO_EXIT="y"
-fi
+#if [ "$2" ];then
+echo
+#fi
 
 function isRoot() {
 	if [ "$EUID" -ne 0 ]; then
@@ -645,8 +646,10 @@ function installOpenVPN() {
 		# За NAT мы по умолчанию будем использовать общедоступный IPv4 / IPv6.
 		if [[ $IPV6_SUPPORT == "y" ]]; then
 			PUBLIC_IP=$(curl --retry 5 --retry-connrefused https://ifconfig.io)
+#			PUBLIC_IP=$(wget -qO- eth0.me)
 		else
 			PUBLIC_IP=$(curl --retry 5 --retry-connrefused -4 https://ifconfig.io)
+#			PUBLIC_IP=$(wget -qO- eth0.me)
 		fi
 		ENDPOINT=${ENDPOINT:-$PUBLIC_IP}
 	fi
@@ -1178,22 +1181,21 @@ echo "$CLIENT	:	$linktofile" >> /tmp/users_upload_links.txt
 chmod 666 /home/users_upload_links.txt
 chmod 666 /tmp/users_upload_links.txt
 # test
-echo
-
-if [[ $AUTO_EXIT = "y" ]];then
-	exit 0
-fi
+	echo
 	echo 
 	echo "The configuration file has been written to $homeDir/$CLIENT.ovpn."
 	echo "Загрузите файл $CLIENT.ovpn и импортируйте его в свой клиент OpenVPN."
 	echo; echo; echo; echo;
 	echo "Пользователь создан!"
+	if [[ $AUTO_EXIT != "y" ]];then
 	read -n1 -r -p "Нажмите Enter для возврата в меню..."
-	echo; echo; echo;
-	unset PASS	
-	unset CLIENT
-	unset CLIENTEXISTS	
-manageMenu					
+	
+		echo; echo; echo;
+		unset PASS	
+		unset CLIENT
+		unset CLIENTEXISTS	
+		manageMenu		
+	fi		
 }
 
 
@@ -1642,12 +1644,24 @@ initialCheck
 # Проверьте, установлен ли OpenVPN уже
 if [[ -e /etc/openvpn/server.conf ]]; then
 	if [[ $AUTO_INSTALL = "y" ]];then
-	CLIENT=$1
-	PASS=${PASS:-1}
-	newClient
-		if [ "$2" ];then
-		sleep 3
-		exit 0
+	
+	for new_arg in $@
+	do
+		CLIENT=$new_arg
+		PASS=${PASS:-1}
+		newClient
+	done
+		if [ "$1" ];then
+			echo "__________________"
+			echo "Auto EXIT in 5 sec"
+			echo "   or press"
+			echo "M) - to menu "
+			unset mmm
+			read -t5 mmm
+			if [ "$mmm" == "m" ];then
+				manageMenu
+			fi
+			exit 0
 		fi
 	fi
 	manageMenu
