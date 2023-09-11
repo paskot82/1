@@ -1082,16 +1082,18 @@ verb 3" >>/etc/openvpn/client-template.txt
 function newClient() {
 
 st=0
-
 	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ || "$st" = "5" ]]; do
 		st=$(($st+1))
-		if [ "$st" = "5" ]; then CLIENT="Unnoun"; fi
+		if [ "$st" = "5" ]; then CLIENT="Admin"; else
 		echo ""
 		echo "Назовите имя клиента."
 		echo "Имя должно состоять из буквенно-цифровых символов."
 		echo " Он также может содержать символ подчеркивания или тире."
 		read -rp "Client name: " -e CLIENT
+		fi
 	done
+echo "__________"	
+echo "|$CLIENT|"
 
 	CLIENTEXISTS=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c -E "/CN=$CLIENT\$")
 	if [[ $CLIENTEXISTS == '1' ]]; then
@@ -1656,8 +1658,10 @@ newClientS(){
 if [[ $AUTO_INSTALL = "y" ]];then
 	for new_arg in $all_Arguments
 	do
+
 		CLIENT=$new_arg
 		PASS=${PASS:-1}
+	echo "new_arg=$new_arg|CLIENT=$CLIENT"		
 		newClient
 	done
 	
