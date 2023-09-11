@@ -1080,30 +1080,36 @@ verb 3" >>/etc/openvpn/client-template.txt
 
 function newClient() {
 
-	echo ""
-	echo "Назовите мне имя клиента."
-	echo "Имя должно состоять из буквенно-цифровых символов. Он также может содержать символ подчеркивания или тире."
+
 
 	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ ]]; do
+		echo ""
+		echo "Назовите имя клиента."
+		echo "Имя должно состоять из буквенно-цифровых символов."
+		echo " Он также может содержать символ подчеркивания или тире."
 		read -rp "Client name: " -e CLIENT
-	done
-
-	echo ""
-	echo "Вы хотите защитить файл конфигурации паролем?"
-	echo "(например, зашифруйте закрытый ключ паролем)"
-	echo "   1) Добавление клиента без пароля"
-	echo "   2) Используйте пароль для клиента"
-
-	until [[ $PASS =~ ^[1-2]$ ]]; do
-		read -rp "Выберите опцию [1-2]: " -e -i 1 PASS
 	done
 
 	CLIENTEXISTS=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c -E "/CN=$CLIENT\$")
 	if [[ $CLIENTEXISTS == '1' ]]; then
 		echo ""
-		echo "Указанный клиентский CN уже был найден в easy-rsa, пожалуйста, выберите другое имя."
-		exit
-	else
+		echo " Указанный клиентский: $CLIENT"
+		echo " уже есть в easy-rsa, пожалуйста, выберите другое имя."
+		sleep 5
+		return
+	fi
+
+	until [[ $PASS =~ ^[1-2]$ ]]; do
+		echo ""
+		echo "Вы хотите защитить файл конфигурации паролем?"
+		echo "(например, зашифруйте закрытый ключ паролем)"
+		echo "   1) Добавление клиента без пароля"
+		echo "   2) Используйте пароль для клиента"	
+		read -rp "Выберите опцию [1-2]: " -e -i 1 PASS
+	done
+
+
+
 		cd /etc/openvpn/easy-rsa/ || return
 		case $PASS in
 		1)
@@ -1114,8 +1120,7 @@ function newClient() {
 			./easyrsa build-client-full "$CLIENT"
 			;;
 		esac
-		echo "Client $CLIENT added."
-	fi
+
 
 	# Домашний каталог пользователя, в который будет записана конфигурация клиента
 	if [ -e "/home/${CLIENT}" ]; then
@@ -1178,7 +1183,7 @@ linktofile="$(curl -F "file=@$homeDir/$CLIENT.ovpn" "https://file.io" | jq ".lin
 echo -e "$linktofile - ссылка  на конфигурационный файл клиента $CLIENT"
 echo "$CLIENT	:	$linktofile" >> $homeDir/users_upload_links.txt
 echo "$CLIENT	:	$linktofile" >> /tmp/users_upload_links.txt
-chmod 666 /home/users_upload_links.txt
+chmod 666 $homeDir/users_upload_links.txt
 chmod 666 /tmp/users_upload_links.txt
 # test
 	echo
@@ -1436,6 +1441,8 @@ showlink(){
 			read -p "Клиент: " client_number
 		done
 		
+		client=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | sed -n "$client_number"p)
+		echo		
 		
 					# Домашний каталог пользователя, в который будет записана конфигурация клиента
 	if [ -e "/home/${client}" ]; then
@@ -1455,8 +1462,7 @@ showlink(){
 	fi
 		
 		
-		client=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | sed -n "$client_number"p)
-		echo
+
 		linktofile="$(curl -F "file=@$homeDir/$client.ovpn" "https://file.io" | jq ".link")"
 		clear
 		echo
@@ -1638,43 +1644,62 @@ function manageMenu() {
 	esac
 }
 
+
+# цикл из нескольких клиентов
+
+
+
+newClientS(){
+if [[ $AUTO_INSTALL = "y" ]];then
+	for new_arg in $@
+	do
+		CLIENT=$new_arg
+		PASS=${PASS:-1}
+		newClient
+	done
+	
+		echo "__________________"
+		echo "Auto EXIT in 5 sec"
+		echo "    or press"
+		echo "M) - for MENU "
+		unset mmm
+		read -t5 mmm
+		if [ "$mmm" == "m" ];then
+			unset CLIENT
+			unset CLIENTEXISTS
+			unset PASS		
+			manageMenu
+		else
+			exit 0
+		fi
+			
+		
+
+else	
+	manageMenu
+fi
+}
+
+
+
+
 # Проверьте наличие root, TUN, OS...
 initialCheck
 
-# Проверьте, установлен ли OpenVPN уже
+
+
+
+
+
+# Проверьте, установлен ли уже OpenVPN
 if [[ -e /etc/openvpn/server.conf ]]; then
-	if [[ $AUTO_INSTALL = "y" ]];then
-		for new_arg in $@
-		do
-			CLIENT=$new_arg
-			PASS=${PASS:-1}
-			newClient
-		done
-	fi
-	manageMenu
+	newClientS "$@"
 else
 	installOpenVPN
 		if [ "$1" ];then
-			for new_arg in $@
-			do
-				CLIENT=$new_arg
-				PASS=${PASS:-1}
-				newClient
-			done
-			echo "__________________"
-			echo "Auto EXIT in 5 sec"
-			echo "   or press"
-			echo "M) - to menu "
-			unset mmm
-			read -t5 mmm
-			if [ "$mmm" == "m" ];then
-				manageMenu
-			fi
-			exit 0
+			newClientS "$@"
 		else
 			newClient
 		fi	
-
-	manageMenu
-	#AUTO_INSTALL
 fi
+exit 0
