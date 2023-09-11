@@ -9,7 +9,7 @@
 if [ $# -ne 0 ]; then 
 AUTO_INSTALL="y"
 AUTO_EXIT="y"
-VseClients="$@"
+all_Arguments="$@"
 #clientA=$1
 fi
 
@@ -1082,6 +1082,8 @@ verb 3" >>/etc/openvpn/client-template.txt
 function newClient() {
 
 st=0
+echo "__________"	
+echo "CLIENT:|$CLIENT| $all_Arguments:|$all_Arguments| \$1:|$1|"
 	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ || "$st" = "5" ]]; do
 		st=$(($st+1))
 		if [ "$st" = "5" ]; then CLIENT="Admin"; else
@@ -1198,14 +1200,15 @@ chmod 666 /tmp/users_upload_links.txt
 	echo; echo; echo; echo;
 	echo "Пользователь создан!"
 	if [[ "$AUTO_EXIT" != "y" ]];then
-	read -n1 -r -p "Нажмите Enter для возврата в меню..."
-	
 		echo; echo; echo;
+		read -n1 -r -p "Нажмите Enter для возврата в меню..."
+	fi
+		
 		unset PASS	
 		unset CLIENT
 		unset CLIENTEXISTS	
 		manageMenu		
-	fi		
+		
 }
 
 
@@ -1661,7 +1664,7 @@ if [[ $AUTO_INSTALL = "y" ]];then
 
 		CLIENT=$new_arg
 		PASS=${PASS:-1}
-	echo "new_arg=$new_arg|CLIENT=$CLIENT"		
+	echo "(newClientS):new_arg=$new_arg|CLIENT=$CLIENT"		
 		newClient
 	done
 	
@@ -1711,3 +1714,11 @@ else
 		fi	
 fi
 exit 0
+
+
+
+
+
+
+
+
