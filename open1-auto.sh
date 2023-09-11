@@ -9,6 +9,7 @@
 if [ $# -ne 0 ]; then 
 AUTO_INSTALL="y"
 AUTO_EXIT="y"
+VseClients="$@"
 #clientA=$1
 fi
 
@@ -316,7 +317,7 @@ function installQuestions() {
 	echo "   1) UDP"
 	echo "   2) TCP"
 	until [[ $PROTOCOL_CHOICE =~ ^[1-2]$ ]]; do
-		read -rp "Протокол [1-2]: " -e -i 1 PROTOCOL_CHOICE
+		read -rp "Протокол [1-2]: " -e -i 2 PROTOCOL_CHOICE
 	done
 	case $PROTOCOL_CHOICE in
 	1)
@@ -1080,9 +1081,11 @@ verb 3" >>/etc/openvpn/client-template.txt
 
 function newClient() {
 
+st=0
 
-
-	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ ]]; do
+	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ || "$st" = "5" ]]; do
+		st=$(($st+1))
+		if [ "$st" = "5" ]; then CLIENT="Unnoun"; fi
 		echo ""
 		echo "Назовите имя клиента."
 		echo "Имя должно состоять из буквенно-цифровых символов."
@@ -1651,7 +1654,7 @@ function manageMenu() {
 
 newClientS(){
 if [[ $AUTO_INSTALL = "y" ]];then
-	for new_arg in $@
+	for new_arg in $all_Arguments
 	do
 		CLIENT=$new_arg
 		PASS=${PASS:-1}
@@ -1693,11 +1696,12 @@ initialCheck
 
 # Проверьте, установлен ли уже OpenVPN
 if [[ -e /etc/openvpn/server.conf ]]; then
-	newClientS "$@"
+	newClientS "$all_Arguments"
 else
 	installOpenVPN
 		if [ "$1" ];then
-			newClientS "$@"
+			all_Arguments="$@"
+			newClientS "$all_Arguments"
 		else
 			newClient
 		fi	
