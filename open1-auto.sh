@@ -7,19 +7,10 @@
 
 
 if [ $# -ne 0 ]; then 
-AUTO_INSTALL="y"
-AUTO_EXIT="y"
-all_Arguments="$@"
-#clientA=$1
+	AUTO_INSTALL="y"
+	Clients_from_arguments="$@"
 fi
 
-
-
-
-
-#if [ "$2" ];then
-echo
-#fi
 
 function isRoot() {
 	if [ "$EUID" -ne 0 ]; then
@@ -1080,22 +1071,14 @@ verb 3" >>/etc/openvpn/client-template.txt
 }
 
 function newClient() {
-
-st=0
-echo "__________"	
-echo "CLIENT:|$CLIENT| all_Arguments:|$all_Arguments| \$1:|$1|"
 	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ || "$st" = "5" ]]; do
-		st=$(($st+1))
-		if [ "$st" = "5" ]; then CLIENT="Admin"; else
 		echo ""
 		echo "Назовите имя клиента."
 		echo "Имя должно состоять из буквенно-цифровых символов."
 		echo " Он также может содержать символ подчеркивания или тире."
 		read -rp "Client name: " -e CLIENT
-		fi
 	done
-echo "__________"	
-echo "|$CLIENT|"
+
 
 	CLIENTEXISTS=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c -E "/CN=$CLIENT\$")
 	if [[ $CLIENTEXISTS == '1' ]]; then
@@ -1202,7 +1185,7 @@ chmod 666 /tmp/users_upload_links.txt
 		unset PASS	
 		unset CLIENT
 		unset CLIENTEXISTS	
-	if [[ "$AUTO_EXIT" != "y" ]];then
+	if [[ "$AUTO_INSTALL" != "y" ]];then
 		echo; echo; echo;
 		read -n1 -r -p "Нажмите Enter для возврата в меню..."
 		manageMenu		
@@ -1656,13 +1639,12 @@ function manageMenu() {
 
 
 newClientS(){
-if [[ $AUTO_INSTALL = "y" ]];then
-	for new_arg in $all_Arguments
+if [[ "$Clients_from_arguments" ]];then
+	for new_arg in $Clients_from_arguments
 	do
 
 		CLIENT=$new_arg
 		PASS=${PASS:-1}
-	echo "(newClientS):new_arg=$new_arg|CLIENT=$CLIENT"		
 		newClient
 	done
 	
@@ -1672,17 +1654,11 @@ if [[ $AUTO_INSTALL = "y" ]];then
 		echo "M) - for MENU "
 		unset mmm
 		read -t5 mmm
-		if [ "$mmm" == "m" ];then
-			unset CLIENT
-			unset CLIENTEXISTS
-			unset PASS		
+		if [ "$mmm" == "m" ];then	
 			manageMenu
 		else
 			exit 0
 		fi
-			
-		
-
 else	
 	manageMenu
 fi
@@ -1701,12 +1677,11 @@ initialCheck
 
 # Проверьте, установлен ли уже OpenVPN
 if [[ -e /etc/openvpn/server.conf ]]; then
-	newClientS "$all_Arguments"
+	newClientS
 else
 	installOpenVPN
-		if [ "$1" ];then
-			all_Arguments="$@"
-			newClientS "$all_Arguments"
+		if [ "$Clients_from_arguments" ];then
+			newClientS
 		else
 			newClient
 		fi	
