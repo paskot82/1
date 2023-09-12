@@ -1083,7 +1083,7 @@ function newClient() {
 
 st=0
 echo "__________"	
-echo "CLIENT:|$CLIENT| $all_Arguments:|$all_Arguments| \$1:|$1|"
+echo "CLIENT:|$CLIENT| all_Arguments:|$all_Arguments| \$1:|$1|"
 	until [[ $CLIENT =~ ^[a-zA-Z0-9_-]+$ || "$st" = "5" ]]; do
 		st=$(($st+1))
 		if [ "$st" = "5" ]; then CLIENT="Admin"; else
@@ -1199,16 +1199,14 @@ chmod 666 /tmp/users_upload_links.txt
 	echo "Загрузите файл $CLIENT.ovpn и импортируйте его в свой клиент OpenVPN."
 	echo; echo; echo; echo;
 	echo "Пользователь создан!"
-	if [[ "$AUTO_EXIT" != "y" ]];then
-		echo; echo; echo;
-		read -n1 -r -p "Нажмите Enter для возврата в меню..."
-	fi
-		
 		unset PASS	
 		unset CLIENT
 		unset CLIENTEXISTS	
+	if [[ "$AUTO_EXIT" != "y" ]];then
+		echo; echo; echo;
+		read -n1 -r -p "Нажмите Enter для возврата в меню..."
 		manageMenu		
-		
+	fi
 }
 
 
